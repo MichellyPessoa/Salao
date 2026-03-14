@@ -1,0 +1,417 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Michelly Pessoa Agendamentos</title>
+<link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500&display=swap" rel="stylesheet">
+<style>
+body{
+  margin:0;
+  font-family:'Roboto',Arial,sans-serif;
+  background:url("file_00000000497471f5a351a64d074cb17d.png") no-repeat center center fixed;
+  background-size:cover;
+}
+.container{
+  background:rgba(255,255,255,0.95);
+  max-width:650px;
+  margin:40px auto;
+  padding:25px;
+  border-radius:15px;
+  box-shadow:0 8px 20px rgba(0,0,0,0.3);
+  position:relative;
+}
+h1,h2{text-align:center;color:#d63384;}
+input,select,button{
+  width:100%;
+  padding:10px;
+  margin:8px 0 15px 0;
+  border-radius:8px;
+  border:1px solid #ccc;
+  font-size:16px;
+}
+button{
+  background:#d63384;
+  color:white;
+  border:none;
+  cursor:pointer;
+  transition:0.3s;
+}
+button:hover{opacity:0.9;}
+table{
+  width:100%;
+  border-collapse:collapse;
+  margin-top:20px;
+}
+th,td{
+  border:1px solid #ccc;
+  padding:10px;
+  font-size:16px;
+}
+th{
+  background:#d63384;
+  color:white;
+}
+tr:nth-child(even){background:#f9f9f9;}
+.today{background:#ffe6f0;}
+
+/* Botão admin bolinha */
+#btnAdmin {
+  position: absolute;
+  top: 15px;
+  right: 15px;
+  width: 35px;
+  height: 35px;
+  border-radius: 50%;
+  background: #d63384;
+  color: white;
+  border: none;
+  font-weight: bold;
+  font-size: 18px;
+  cursor: pointer;
+  box-shadow: 0 3px 8px rgba(0,0,0,0.3);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  z-index: 10;
+  transition: 0.3s;
+}
+#btnAdmin:hover { opacity: 0.9; }
+
+/* Slider */
+#slider{
+  margin-top:20px;
+  width:100%;
+  height:250px;
+  overflow:hidden;
+  border-radius:10px;
+  position: relative;
+}
+#slider img{
+  width:100%;
+  height:100%;
+  object-fit:cover;
+  transition: opacity 0.8s ease-in-out;
+  opacity: 1;
+  position: absolute;
+  top: 0;
+  left: 0;
+}
+
+/* Fotos admin */
+#listaFotos img{
+  width:80px;
+  margin:5px;
+  border-radius:5px;
+}
+#listaFotos button{
+  margin:5px 5px 15px 0;
+  padding:5px 8px;
+  font-size:12px;
+  border-radius:5px;
+  background:#dc3545;
+  color:white;
+  border:none;
+  cursor:pointer;
+}
+
+/* Campo WhatsApp com prefixo +55 */
+.whatsappField{
+  display: flex;
+}
+.whatsappField span{
+  background:#eee;
+  padding:10px;
+  border-radius:8px 0 0 8px;
+  border:1px solid #ccc;
+  border-right:none;
+  font-size:16px;
+  line-height:18px;
+}
+.whatsappField input{
+  flex:1;
+  border-radius:0 8px 8px 0;
+  border:1px solid #ccc;
+  border-left:none;
+  padding:10px;
+  font-size:16px;
+}
+</style>
+</head>
+<body>
+
+<div class="container">
+  <button id="btnAdmin">⚙</button>
+
+  <h1>💅Agendamentos💅</h1>
+  <form id="formAgendamento">
+    <input type="text" id="nome" placeholder="Nome e sobrenome" required>
+    <div class="whatsappField">
+      <span>+55</span>
+      <input type="text" id="whatsapp" placeholder="(somente números, ex: 11964657571)" required>
+    </div>
+    <input type="date" id="data" required>
+    <select id="horario" required>
+      <option value="">Selecione horário</option>
+    </select>
+    <select id="servico" required>
+      <option value="">Selecione serviço</option>
+      <option>Mão e Pé</option>
+      <option>Pedicure</option>
+      <option>Manicure</option>
+    </select>
+    <button type="submit">Agendar</button>
+  </form>
+
+  <div id="slider">
+    <img id="slideImg">
+  </div>
+</div>
+
+<!-- Login Admin -->
+<div class="container" id="containerLogin" style="display:none">
+<h2>Painel Admin</h2>
+<form id="formLogin">
+<input type="text" id="usuario" placeholder="Usuário">
+<input type="password" id="senha" placeholder="Senha">
+<button type="submit">Login</button>
+</form>
+</div>
+
+<!-- Painel Admin -->
+<div class="container" id="painelADM" style="display:none">
+<h2>Agendamentos</h2>
+<p>Total: <span id="totalAgendamentos">0</span></p>
+<table>
+<thead>
+<tr>
+<th>Nome</th><th>Data</th><th>Horário</th><th>Serviço</th><th>Ações</th>
+</tr>
+</thead>
+<tbody id="listaAgendamentos"></tbody>
+</table>
+
+<h2>Fotos do Slide</h2>
+<input type="file" id="fotoUpload">
+<button id="btnUploadFoto">Enviar Foto</button>
+<div id="listaFotos"></div>
+</div>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-app.js";
+import { getFirestore, collection, query, where, getDocs, addDoc, deleteDoc, orderBy, doc } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyDr30gr-1zVrkA9Vk3QTOc9-pzbGB0zDpE",
+  authDomain: "maosdefada.firebaseapp.com",
+  projectId: "maosdefada",
+  storageBucket: "maosdefada.firebasestorage.app",
+  messagingSenderId: "9299274038",
+  appId: "1:9299274038:web:1617789c2ca2a08dfc6b97"
+};
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
+
+/* abrir login */
+document.getElementById("btnAdmin").onclick = () => {
+  document.getElementById("containerLogin").style.display = "block";
+  window.scrollTo(0,document.body.scrollHeight);
+};
+
+/* login */
+document.getElementById("formLogin").addEventListener("submit", async e => {
+  e.preventDefault();
+  const usuario = document.getElementById("usuario").value.trim();
+  const senha = document.getElementById("senha").value.trim();
+  if(usuario==="Michelly" && senha==="88691553"){
+    document.getElementById("painelADM").style.display="block";
+    document.getElementById("containerLogin").style.display="none";
+    carregarAgendamentos();
+    carregarListaFotos();
+  } else alert("Login incorreto");
+});
+
+/* horários */
+const horarios = {5:["18:00"],6:["08:00","10:00","14:00","16:00","18:00"]};
+const inputData = document.getElementById("data");
+const selectHorario = document.getElementById("horario");
+inputData.addEventListener("change", atualizarHorarios);
+
+async function atualizarHorarios(){
+  selectHorario.innerHTML = '<option value="">Selecione horário</option>';
+  const dia = new Date(inputData.value+"T00:00:00").getDay();
+  const lista = horarios[dia]||[];
+  const q = query(collection(db,"agendamentos"),where("data","==",inputData.value));
+  const snap = await getDocs(q);
+  const ocupados = snap.docs.map(d=>d.data().horario);
+  lista.forEach(h=>{
+    if(!ocupados.includes(h)){
+      const o = document.createElement("option");
+      o.value=h; o.textContent=h;
+      selectHorario.appendChild(o);
+    }
+  });
+}
+
+/* AGENDAMENTO */
+document.getElementById("formAgendamento").addEventListener("submit", async e=>{
+  e.preventDefault();
+  const nome = document.getElementById("nome").value.trim();
+  const whatsappCliente = document.getElementById("whatsapp").value.trim();
+  const data = inputData.value.trim();
+  const horario = selectHorario.value;
+  const servico = document.getElementById("servico").value;
+
+  // Validação completa
+  if(!nome || !whatsappCliente || !data || !horario || !servico){
+    alert("Por favor, preencha todos os campos antes de agendar.");
+    return;
+  }
+
+  await addDoc(collection(db,"agendamentos"),{nome, whatsapp: whatsappCliente, data, horario, servico});
+
+  const msg = `💖 Novo Agendamento 💖
+
+👤 Nome: ${nome}
+📅 Data: ${data}
+⏰ Horário: ${horario}
+💅 Serviço: ${servico}
+📱 WhatsApp: +55${whatsappCliente}`;
+
+  const meuNumero = "5511964657571";
+  window.location.href=`https://wa.me/${meuNumero}?text=${encodeURIComponent(msg)}`;
+});
+
+/* CARREGAR AGENDAMENTOS */
+async function carregarAgendamentos(){
+  const q = query(collection(db,"agendamentos"),orderBy("data"));
+  const snap = await getDocs(q);
+  const lista = document.getElementById("listaAgendamentos");
+  lista.innerHTML = "";
+  document.getElementById("totalAgendamentos").innerText = snap.size;
+
+  snap.forEach(docItem=>{
+    const a = docItem.data();
+    const hoje = new Date();
+    const agendamentoData = new Date(a.data+"T00:00:00");
+    const umDia = new Date();
+    umDia.setDate(hoje.getDate() + 1);
+    const podeEnviar = agendamentoData >= umDia;
+
+    const tr = document.createElement("tr");
+    tr.innerHTML = `<td>${a.nome}</td>
+                    <td>${a.data}</td>
+                    <td>${a.horario}</td>
+                    <td>${a.servico}</td>
+                    <td>
+                      <button onclick="excluir('${docItem.id}')">❌</button>
+                      <button ${!podeEnviar ? "disabled" : ""} onclick="enviarConfirmacao('${a.nome}','${a.whatsapp}','${a.data}','${a.horario}')">💌 Confirmar</button>
+                    </td>`;
+    lista.appendChild(tr);
+  });
+}
+
+/* EXCLUIR AGENDAMENTO */
+window.excluir = async id => {
+  await deleteDoc(doc(db,"agendamentos",id));
+  carregarAgendamentos();
+};
+
+/* ENVIAR CONFIRMAÇÃO PARA O CLIENTE */
+window.enviarConfirmacao = (nome, whatsapp, data, horario) => {
+  const msg = `Olá, ${nome}! 💖
+
+Estou passando para confirmar seu horário:
+📅 Data: ${data}
+⏰ Horário: ${horario}
+
+Peço, por favor, que atrasos não ultrapassem 10 minutos, para manter a qualidade e capricho que você merece.
+
+Agradeço a compreensão.
+Te espero! ✨💕
+
+Com carinho,
+𝑴𝒊𝒄𝒉𝒆𝒍𝒍𝒚 𝑷𝒆𝒔𝒔𝒐𝒂 💅💎`;
+
+  window.open(`https://wa.me/55${whatsapp}?text=${encodeURIComponent(msg)}`, "_blank");
+};
+
+/* ----------- Cloudinary upload fotos ----------- */
+const btnUpload = document.getElementById("btnUploadFoto");
+const fotoUpload = document.getElementById("fotoUpload");
+
+btnUpload.onclick = async () => {
+  const file = fotoUpload.files[0];
+  if(!file){ alert("Selecione uma foto"); return; }
+
+  const formData = new FormData();
+  formData.append("file", file);
+  formData.append("upload_preset", "Slides");
+
+  try {
+    const resposta = await fetch("https://api.cloudinary.com/v1_1/dsococdfy/image/upload",{
+      method:"POST",
+      body:formData
+    });
+    const data = await resposta.json();
+    const url = data.secure_url;
+
+    await addDoc(collection(db,"fotos"), {url, criadoEm: new Date()});
+    fotoUpload.value="";
+    carregarListaFotos();
+    carregarFotos();
+    alert("Foto enviada com sucesso!");
+  } catch(err){
+    console.error(err);
+    alert("Erro ao enviar a foto.");
+  }
+};
+
+/* listar fotos */
+async function carregarListaFotos(){
+  const snap = await getDocs(collection(db,"fotos"));
+  const div = document.getElementById("listaFotos");
+  div.innerHTML = "";
+  snap.forEach(docItem=>{
+    const data = docItem.data();
+    const img = document.createElement("img");
+    img.src = data.url;
+    const btn = document.createElement("button");
+    btn.innerText = "Excluir";
+    btn.onclick = async ()=>{
+      await deleteDoc(doc(db,"fotos",docItem.id));
+      carregarListaFotos();
+      carregarFotos();
+    };
+    div.appendChild(img);
+    div.appendChild(btn);
+  });
+}
+
+/* slider com fade */
+let fotos = [];
+let index = 0;
+const slideImg = document.getElementById("slideImg");
+
+async function carregarFotos(){
+  fotos = [];
+  const snap = await getDocs(collection(db,"fotos"));
+  snap.forEach(d => fotos.push(d.data().url));
+  if(fotos.length>0) slideImg.src = fotos[0];
+
+  setInterval(() => {
+    if(fotos.length === 0) return;
+    slideImg.style.opacity = 0;
+    setTimeout(() => {
+      index++;
+      if(index >= fotos.length) index = 0;
+      slideImg.src = fotos[index];
+      slideImg.style.opacity = 1;
+    }, 500);
+  }, 3000);
+}
+carregarFotos();
+</script>
+</body>
+  </html>
