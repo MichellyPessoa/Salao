@@ -5,7 +5,6 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Michelly Pessoa Agendamentos</title>
 <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500&display=swap" rel="stylesheet">
-
 <style>
 body{
   margin:0;
@@ -36,10 +35,27 @@ button{
   color:white;
   border:none;
   cursor:pointer;
+  transition:0.3s;
 }
 button:hover{opacity:0.9;}
+table{
+  width:100%;
+  border-collapse:collapse;
+  margin-top:20px;
+}
+th,td{
+  border:1px solid #ccc;
+  padding:10px;
+  font-size:16px;
+}
+th{
+  background:#d63384;
+  color:white;
+}
+tr:nth-child(even){background:#f9f9f9;}
+.today{background:#ffe6f0;}
 
-#btnAdmin{
+#btnAdmin {
   position:absolute;
   top:15px;
   right:15px;
@@ -63,20 +79,16 @@ button:hover{opacity:0.9;}
   width:100%;
   height:100%;
   object-fit:cover;
+  transition: opacity 0.8s;
   position:absolute;
 }
 
+/* WhatsApp */
 .whatsappField{display:flex;}
-.whatsappField span{
-  background:#eee;
-  padding:10px;
-}
-.whatsappField input{
-  flex:1;
-}
+.whatsappField span{background:#eee;padding:10px;}
+.whatsappField input{flex:1;}
 </style>
 </head>
-
 <body>
 
 <div class="container">
@@ -111,7 +123,7 @@ button:hover{opacity:0.9;}
   </div>
 </div>
 
-<!-- LOGIN -->
+<!-- Login -->
 <div class="container" id="containerLogin" style="display:none">
 <h2>Painel Admin</h2>
 <form id="formLogin">
@@ -121,12 +133,12 @@ button:hover{opacity:0.9;}
 </form>
 </div>
 
-<!-- ADMIN -->
+<!-- Painel -->
 <div class="container" id="painelADM" style="display:none">
 <h2>Agendamentos</h2>
 
-<!-- 🔥 BOTÃO RELATÓRIO -->
-<button onclick="gerarRelatorio()" style="background:#28a745; margin-bottom:10px;">
+<!-- BOTÃO RELATÓRIO -->
+<button onclick="gerarRelatorio()" style="background:#28a745;margin-bottom:10px;">
 📋 Gerar relatório de amanhã
 </button>
 
@@ -141,7 +153,7 @@ button:hover{opacity:0.9;}
 <tbody id="listaAgendamentos"></tbody>
 </table>
 
-<h2>Fotos</h2>
+<h2>Fotos do Slide</h2>
 <input type="file" id="fotoUpload">
 <button id="btnUploadFoto">Enviar Foto</button>
 <div id="listaFotos"></div>
@@ -159,7 +171,6 @@ const firebaseConfig = {
   messagingSenderId: "9299274038",
   appId: "1:9299274038:web:1617789c2ca2a08dfc6b97"
 };
-
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 
@@ -170,8 +181,8 @@ document.getElementById("btnAdmin").onclick = () => {
 
 document.getElementById("formLogin").addEventListener("submit", e=>{
   e.preventDefault();
-  if(document.getElementById("usuario").value==="Michelly" && document.getElementById("senha").value==="88691553"){
-    document.getElementById("painelADM").style.display="block";
+  if(usuario.value==="Michelly" && senha.value==="88691553"){
+    painelADM.style.display="block";
     carregarAgendamentos();
   }
 });
@@ -179,15 +190,12 @@ document.getElementById("formLogin").addEventListener("submit", e=>{
 /* HORÁRIOS */
 const horarios = {5:["18:00"],6:["08:00","10:00","14:00","16:00","18:00"]};
 
-document.getElementById("data").addEventListener("change", async ()=>{
-  const data = document.getElementById("data").value;
-  const select = document.getElementById("horario");
-  select.innerHTML='<option>Selecione horário</option>';
-
-  const dia = new Date(data+"T00:00:00").getDay();
+data.addEventListener("change", async ()=>{
+  horario.innerHTML='<option>Selecione horário</option>';
+  const dia = new Date(data.value+"T00:00:00").getDay();
   const lista = horarios[dia]||[];
 
-  const snap = await getDocs(query(collection(db,"agendamentos"),where("data","==",data)));
+  const snap = await getDocs(query(collection(db,"agendamentos"),where("data","==",data.value)));
   const ocupados = snap.docs.map(d=>d.data().horario);
 
   lista.forEach(h=>{
@@ -195,22 +203,22 @@ document.getElementById("data").addEventListener("change", async ()=>{
       const o=document.createElement("option");
       o.value=h;
       o.textContent=h;
-      select.appendChild(o);
+      horario.appendChild(o);
     }
   });
 });
 
 /* AGENDAR */
-document.getElementById("formAgendamento").addEventListener("submit", async e=>{
+formAgendamento.addEventListener("submit", async e=>{
   e.preventDefault();
 
-  const nome = nome.value;
-  const whatsapp = whatsapp.value;
-  const data = document.getElementById("data").value;
-  const horario = document.getElementById("horario").value;
-  const servico = document.getElementById("servico").value;
-
-  await addDoc(collection(db,"agendamentos"),{nome, whatsapp, data, horario, servico});
+  await addDoc(collection(db,"agendamentos"),{
+    nome:nome.value,
+    whatsapp:whatsapp.value,
+    data:data.value,
+    horario:horario.value,
+    servico:servico.value
+  });
 
   alert("Agendado!");
 });
@@ -218,16 +226,19 @@ document.getElementById("formAgendamento").addEventListener("submit", async e=>{
 /* LISTAR */
 async function carregarAgendamentos(){
   const snap = await getDocs(query(collection(db,"agendamentos"),orderBy("data")));
-  const lista = document.getElementById("listaAgendamentos");
-  lista.innerHTML="";
-  document.getElementById("totalAgendamentos").innerText = snap.size;
+  listaAgendamentos.innerHTML="";
+  totalAgendamentos.innerText = snap.size;
 
   snap.forEach(docItem=>{
     const a = docItem.data();
-    const tr=document.createElement("tr");
-    tr.innerHTML=`<td>${a.nome}</td><td>${a.data}</td><td>${a.horario}</td><td>${a.servico}</td>
-    <td><button onclick="excluir('${docItem.id}')">❌</button></td>`;
-    lista.appendChild(tr);
+    listaAgendamentos.innerHTML+=`
+    <tr>
+    <td>${a.nome}</td>
+    <td>${a.data}</td>
+    <td>${a.horario}</td>
+    <td>${a.servico}</td>
+    <td><button onclick="excluir('${docItem.id}')">❌</button></td>
+    </tr>`;
   });
 }
 
@@ -236,36 +247,39 @@ window.excluir = async id=>{
   carregarAgendamentos();
 };
 
-/* 🔥 RELATÓRIO */
+/* 🔥 RELATÓRIO CORRIGIDO */
 window.gerarRelatorio = async () => {
   try{
     const hoje = new Date();
     const amanha = new Date();
     amanha.setDate(hoje.getDate()+1);
 
-    const data = amanha.toISOString().split("T")[0];
+    const ano = amanha.getFullYear();
+    const mes = String(amanha.getMonth()+1).padStart(2,'0');
+    const dia = String(amanha.getDate()).padStart(2,'0');
+    const dataFormatada = `${ano}-${mes}-${dia}`;
 
-    const snap = await getDocs(query(collection(db,"agendamentos"), where("data","==",data)));
+    const snap = await getDocs(query(collection(db,"agendamentos"),where("data","==",dataFormatada)));
 
     if(snap.empty){
-      alert("Nenhum agendamento amanhã");
+      alert("Nenhum agendamento para amanhã.");
       return;
     }
 
-    let msg = "📋 Agendamentos de amanhã:\n\n";
+    let msg="📋 Agendamentos de amanhã:\n\n";
 
     snap.forEach(d=>{
-      const a = d.data();
-      msg += `👤 ${a.nome}\n⏰ ${a.horario}\n💅 ${a.servico}\n\n`;
+      const a=d.data();
+      msg+=`👤 ${a.nome}\n⏰ ${a.horario}\n💅 ${a.servico}\n\n`;
     });
 
     window.open(`https://wa.me/5511964657571?text=${encodeURIComponent(msg)}`);
 
   }catch(e){
-    alert("Erro no relatório");
     console.error(e);
+    alert("Erro no relatório");
   }
 };
 </script>
 </body>
-  </html>
+</html>
