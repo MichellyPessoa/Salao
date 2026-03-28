@@ -56,15 +56,18 @@ tr:nth-child(even){background:#f9f9f9;}
 .today{background:#ffe6f0;}
 
 #btnAdmin {
-  position:absolute;
-  top:15px;
-  right:15px;
-  width:35px;
-  height:35px;
-  border-radius:50%;
-  background:#d63384;
-  color:white;
-  border:none;
+  position: absolute;
+  top: 15px;
+  right: 15px;
+  width: 35px;
+  height: 35px;
+  border-radius: 50%;
+  background: #d63384;
+  color: white;
+  border: none;
+  font-weight: bold;
+  font-size: 18px;
+  cursor: pointer;
 }
 
 #slider{
@@ -83,19 +86,29 @@ tr:nth-child(even){background:#f9f9f9;}
   position:absolute;
 }
 
-/* WhatsApp */
+#listaFotos img{
+  width:80px;
+  margin:5px;
+  border-radius:5px;
+}
+
 .whatsappField{display:flex;}
-.whatsappField span{background:#eee;padding:10px;}
-.whatsappField input{flex:1;}
+.whatsappField span{
+  background:#eee;
+  padding:10px;
+}
+.whatsappField input{
+  flex:1;
+}
 </style>
 </head>
+
 <body>
 
 <div class="container">
   <button id="btnAdmin">⚙</button>
 
   <h1>💅Agendamentos💅</h1>
-
   <form id="formAgendamento">
     <input type="text" id="nome" required>
     <div class="whatsappField">
@@ -123,7 +136,6 @@ tr:nth-child(even){background:#f9f9f9;}
   </div>
 </div>
 
-<!-- Login -->
 <div class="container" id="containerLogin" style="display:none">
 <h2>Painel Admin</h2>
 <form id="formLogin">
@@ -133,11 +145,9 @@ tr:nth-child(even){background:#f9f9f9;}
 </form>
 </div>
 
-<!-- Painel -->
 <div class="container" id="painelADM" style="display:none">
 <h2>Agendamentos</h2>
 
-<!-- BOTÃO RELATÓRIO -->
 <button onclick="gerarRelatorio()" style="background:#28a745;margin-bottom:10px;">
 📋 Gerar relatório de amanhã
 </button>
@@ -171,12 +181,12 @@ const firebaseConfig = {
   messagingSenderId: "9299274038",
   appId: "1:9299274038:web:1617789c2ca2a08dfc6b97"
 };
+
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 
-/* LOGIN */
 document.getElementById("btnAdmin").onclick = () => {
-  document.getElementById("containerLogin").style.display="block";
+  document.getElementById("containerLogin").style.display = "block";
 };
 
 document.getElementById("formLogin").addEventListener("submit", e=>{
@@ -187,7 +197,6 @@ document.getElementById("formLogin").addEventListener("submit", e=>{
   }
 });
 
-/* HORÁRIOS */
 const horarios = {5:["18:00"],6:["08:00","10:00","14:00","16:00","18:00"]};
 
 data.addEventListener("change", async ()=>{
@@ -208,7 +217,6 @@ data.addEventListener("change", async ()=>{
   });
 });
 
-/* AGENDAR */
 formAgendamento.addEventListener("submit", async e=>{
   e.preventDefault();
 
@@ -223,7 +231,6 @@ formAgendamento.addEventListener("submit", async e=>{
   alert("Agendado!");
 });
 
-/* LISTAR */
 async function carregarAgendamentos(){
   const snap = await getDocs(query(collection(db,"agendamentos"),orderBy("data")));
   listaAgendamentos.innerHTML="";
@@ -237,7 +244,10 @@ async function carregarAgendamentos(){
     <td>${a.data}</td>
     <td>${a.horario}</td>
     <td>${a.servico}</td>
-    <td><button onclick="excluir('${docItem.id}')">❌</button></td>
+    <td>
+      <button onclick="excluir('${docItem.id}')">❌</button>
+      <button onclick="enviarConfirmacao('${a.nome}','${a.whatsapp}','${a.data}','${a.horario}')">💌 Confirmar</button>
+    </td>
     </tr>`;
   });
 }
@@ -247,39 +257,59 @@ window.excluir = async id=>{
   carregarAgendamentos();
 };
 
-/* 🔥 RELATÓRIO CORRIGIDO */
-window.gerarRelatorio = async () => {
-  try{
-    const hoje = new Date();
-    const amanha = new Date();
-    amanha.setDate(hoje.getDate()+1);
-
-    const ano = amanha.getFullYear();
-    const mes = String(amanha.getMonth()+1).padStart(2,'0');
-    const dia = String(amanha.getDate()).padStart(2,'0');
-    const dataFormatada = `${ano}-${mes}-${dia}`;
-
-    const snap = await getDocs(query(collection(db,"agendamentos"),where("data","==",dataFormatada)));
-
-    if(snap.empty){
-      alert("Nenhum agendamento para amanhã.");
-      return;
-    }
-
-    let msg="📋 Agendamentos de amanhã:\n\n";
-
-    snap.forEach(d=>{
-      const a=d.data();
-      msg+=`👤 ${a.nome}\n⏰ ${a.horario}\n💅 ${a.servico}\n\n`;
-    });
-
-    window.open(`https://wa.me/5511964657571?text=${encodeURIComponent(msg)}`);
-
-  }catch(e){
-    console.error(e);
-    alert("Erro no relatório");
-  }
+window.enviarConfirmacao = (nome, whatsapp, data, horario) => {
+  const msg = `Confirmação:\n${nome}\n${data} às ${horario}`;
+  window.open(`https://wa.me/55${whatsapp}?text=${encodeURIComponent(msg)}`);
 };
+
+/* 🔥 RELATÓRIO */
+window.gerarRelatorio = async () => {
+
+  const hoje = new Date();
+  const amanha = new Date();
+  amanha.setDate(hoje.getDate() + 1);
+
+  const ano = amanha.getFullYear();
+  const mes = String(amanha.getMonth()+1).padStart(2,'0');
+  const dia = String(amanha.getDate()).padStart(2,'0');
+  const dataFormatada = `${ano}-${mes}-${dia}`;
+
+  const snap = await getDocs(query(collection(db,"agendamentos"), where("data","==",dataFormatada)));
+
+  if(snap.empty){
+    alert("Nenhum agendamento amanhã");
+    return;
+  }
+
+  let msg = "📋 Agendamentos de amanhã:\n\n";
+
+  snap.forEach(d=>{
+    const a = d.data();
+    msg += `${a.nome} - ${a.horario} - ${a.servico}\n`;
+  });
+
+  window.open(`https://wa.me/5511964657571?text=${encodeURIComponent(msg)}`);
+};
+
+/* SLIDER */
+let fotos = [];
+let index = 0;
+const slideImg = document.getElementById("slideImg");
+
+async function carregarFotos(){
+  fotos = [];
+  const snap = await getDocs(collection(db,"fotos"));
+  snap.forEach(d => fotos.push(d.data().url));
+  if(fotos.length>0) slideImg.src = fotos[0];
+
+  setInterval(() => {
+    if(fotos.length === 0) return;
+    index = (index+1)%fotos.length;
+    slideImg.src = fotos[index];
+  }, 3000);
+}
+carregarFotos();
 </script>
+
 </body>
 </html>
