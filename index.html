@@ -82,24 +82,14 @@ tr:nth-child(even){background:#f9f9f9;}
   width:100%;
   height:100%;
   object-fit:cover;
-  transition: opacity 0.8s;
+  transition: opacity 0.8s ease-in-out;
   position:absolute;
 }
 
-#listaFotos img{
-  width:80px;
-  margin:5px;
-  border-radius:5px;
-}
-
+/* WhatsApp */
 .whatsappField{display:flex;}
-.whatsappField span{
-  background:#eee;
-  padding:10px;
-}
-.whatsappField input{
-  flex:1;
-}
+.whatsappField span{background:#eee;padding:10px;}
+.whatsappField input{flex:1;}
 </style>
 </head>
 
@@ -110,10 +100,10 @@ tr:nth-child(even){background:#f9f9f9;}
 
   <h1>💅Agendamentos💅</h1>
   <form id="formAgendamento">
-    <input type="text" id="nome" required>
+    <input type="text" id="nome" placeholder="Nome e sobrenome" required>
     <div class="whatsappField">
       <span>+55</span>
-      <input type="text" id="whatsapp" required>
+      <input type="text" id="whatsapp" placeholder="(somente números)" required>
     </div>
     <input type="date" id="data" required>
 
@@ -139,8 +129,8 @@ tr:nth-child(even){background:#f9f9f9;}
 <div class="container" id="containerLogin" style="display:none">
 <h2>Painel Admin</h2>
 <form id="formLogin">
-<input type="text" id="usuario">
-<input type="password" id="senha">
+<input type="text" id="usuario" placeholder="Usuário">
+<input type="password" id="senha" placeholder="Senha">
 <button type="submit">Login</button>
 </form>
 </div>
@@ -185,6 +175,7 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 
+/* ADMIN */
 document.getElementById("btnAdmin").onclick = () => {
   document.getElementById("containerLogin").style.display = "block";
 };
@@ -194,9 +185,11 @@ document.getElementById("formLogin").addEventListener("submit", e=>{
   if(usuario.value==="Michelly" && senha.value==="88691553"){
     painelADM.style.display="block";
     carregarAgendamentos();
+    carregarListaFotos();
   }
 });
 
+/* HORÁRIOS */
 const horarios = {5:["18:00"],6:["08:00","10:00","14:00","16:00","18:00"]};
 
 data.addEventListener("change", async ()=>{
@@ -217,20 +210,36 @@ data.addEventListener("change", async ()=>{
   });
 });
 
+/* AGENDAMENTO (COM WHATSAPP CORRETO) */
 formAgendamento.addEventListener("submit", async e=>{
   e.preventDefault();
 
+  const nomeCliente = nome.value;
+  const whatsappCliente = whatsapp.value;
+  const dataSel = data.value;
+  const horarioSel = horario.value;
+  const servicoSel = servico.value;
+
   await addDoc(collection(db,"agendamentos"),{
-    nome:nome.value,
-    whatsapp:whatsapp.value,
-    data:data.value,
-    horario:horario.value,
-    servico:servico.value
+    nome:nomeCliente,
+    whatsapp:whatsappCliente,
+    data:dataSel,
+    horario:horarioSel,
+    servico:servicoSel
   });
 
-  alert("Agendado!");
+  const msg = `💖 Novo Agendamento 💖
+
+👤 Nome: ${nomeCliente}
+📅 Data: ${dataSel}
+⏰ Horário: ${horarioSel}
+💅 Serviço: ${servicoSel}
+📱 WhatsApp: +55${whatsappCliente}`;
+
+  window.location.href=`https://wa.me/5511964657571?text=${encodeURIComponent(msg)}`;
 });
 
+/* LISTAR */
 async function carregarAgendamentos(){
   const snap = await getDocs(query(collection(db,"agendamentos"),orderBy("data")));
   listaAgendamentos.innerHTML="";
@@ -257,17 +266,27 @@ window.excluir = async id=>{
   carregarAgendamentos();
 };
 
+/* CONFIRMAÇÃO ORIGINAL */
 window.enviarConfirmacao = (nome, whatsapp, data, horario) => {
-  const msg = `Confirmação:\n${nome}\n${data} às ${horario}`;
+  const msg = `Olá, ${nome}! 💖
+
+Estou passando para confirmar seu horário:
+📅 Data: ${data}
+⏰ Horário: ${horario}
+
+Te espero! ✨💕
+
+Michelly 💅`;
+
   window.open(`https://wa.me/55${whatsapp}?text=${encodeURIComponent(msg)}`);
 };
 
-/* 🔥 RELATÓRIO */
+/* RELATÓRIO CORRIGIDO */
 window.gerarRelatorio = async () => {
 
   const hoje = new Date();
   const amanha = new Date();
-  amanha.setDate(hoje.getDate() + 1);
+  amanha.setDate(hoje.getDate()+1);
 
   const ano = amanha.getFullYear();
   const mes = String(amanha.getMonth()+1).padStart(2,'0');
@@ -281,11 +300,11 @@ window.gerarRelatorio = async () => {
     return;
   }
 
-  let msg = "📋 Agendamentos de amanhã:\n\n";
+  let msg = `📋 Agenda de amanhã 💅\n\n`;
 
   snap.forEach(d=>{
     const a = d.data();
-    msg += `${a.nome} - ${a.horario} - ${a.servico}\n`;
+    msg += `👤 ${a.nome}\n⏰ ${a.horario}\n💅 ${a.servico}\n\n`;
   });
 
   window.open(`https://wa.me/5511964657571?text=${encodeURIComponent(msg)}`);
@@ -304,8 +323,13 @@ async function carregarFotos(){
 
   setInterval(() => {
     if(fotos.length === 0) return;
-    index = (index+1)%fotos.length;
-    slideImg.src = fotos[index];
+    slideImg.style.opacity = 0;
+    setTimeout(() => {
+      index++;
+      if(index >= fotos.length) index = 0;
+      slideImg.src = fotos[index];
+      slideImg.style.opacity = 1;
+    }, 500);
   }, 3000);
 }
 carregarFotos();
