@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Michelly Pessoa Agendamentos</title>
 <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500&display=swap" rel="stylesheet">
+
 <style>
 body{
   margin:0;
@@ -35,42 +36,21 @@ button{
   color:white;
   border:none;
   cursor:pointer;
-  transition:0.3s;
 }
 button:hover{opacity:0.9;}
-table{
-  width:100%;
-  border-collapse:collapse;
-  margin-top:20px;
-}
-th,td{
-  border:1px solid #ccc;
-  padding:10px;
-  font-size:16px;
-}
-th{
+
+#btnAdmin{
+  position:absolute;
+  top:15px;
+  right:15px;
+  width:35px;
+  height:35px;
+  border-radius:50%;
   background:#d63384;
   color:white;
-}
-tr:nth-child(even){background:#f9f9f9;}
-.today{background:#ffe6f0;}
-
-#btnAdmin {
-  position: absolute;
-  top: 15px;
-  right: 15px;
-  width: 35px;
-  height: 35px;
-  border-radius: 50%;
-  background: #d63384;
-  color: white;
-  border: none;
-  font-weight: bold;
-  font-size: 18px;
-  cursor: pointer;
+  border:none;
 }
 
-/* Slider */
 #slider{
   margin-top:20px;
   width:100%;
@@ -83,63 +63,33 @@ tr:nth-child(even){background:#f9f9f9;}
   width:100%;
   height:100%;
   object-fit:cover;
-  transition: opacity 0.8s ease-in-out;
-  opacity: 1;
-  position: absolute;
-  top: 0;
-  left: 0;
+  position:absolute;
 }
 
-/* Fotos admin */
-#listaFotos img{
-  width:80px;
-  margin:5px;
-  border-radius:5px;
-}
-#listaFotos button{
-  margin:5px 5px 15px 0;
-  padding:5px 8px;
-  font-size:12px;
-  border-radius:5px;
-  background:#dc3545;
-  color:white;
-  border:none;
-  cursor:pointer;
-}
-
-/* WhatsApp */
-.whatsappField{
-  display: flex;
-}
+.whatsappField{display:flex;}
 .whatsappField span{
   background:#eee;
   padding:10px;
-  border-radius:8px 0 0 8px;
-  border:1px solid #ccc;
-  border-right:none;
 }
 .whatsappField input{
   flex:1;
-  border-radius:0 8px 8px 0;
-  border:1px solid #ccc;
-  border-left:none;
 }
 </style>
 </head>
+
 <body>
 
 <div class="container">
   <button id="btnAdmin">⚙</button>
 
   <h1>💅Agendamentos💅</h1>
-  <form id="formAgendamento">
-    <input type="text" id="nome" placeholder="Nome e sobrenome" required>
 
+  <form id="formAgendamento">
+    <input type="text" id="nome" required>
     <div class="whatsappField">
       <span>+55</span>
-      <input type="text" id="whatsapp" placeholder="11999999999" required>
+      <input type="text" id="whatsapp" required>
     </div>
-
     <input type="date" id="data" required>
 
     <select id="horario" required>
@@ -161,7 +111,7 @@ tr:nth-child(even){background:#f9f9f9;}
   </div>
 </div>
 
-<!-- Login -->
+<!-- LOGIN -->
 <div class="container" id="containerLogin" style="display:none">
 <h2>Painel Admin</h2>
 <form id="formLogin">
@@ -171,12 +121,14 @@ tr:nth-child(even){background:#f9f9f9;}
 </form>
 </div>
 
-<!-- Painel -->
+<!-- ADMIN -->
 <div class="container" id="painelADM" style="display:none">
 <h2>Agendamentos</h2>
 
-<!-- BOTÃO NOVO -->
-<button onclick="gerarRelatorio()" style="background:#28a745;">📋 Gerar relatório de amanhã</button>
+<!-- 🔥 BOTÃO RELATÓRIO -->
+<button onclick="gerarRelatorio()" style="background:#28a745; margin-bottom:10px;">
+📋 Gerar relatório de amanhã
+</button>
 
 <p>Total: <span id="totalAgendamentos">0</span></p>
 
@@ -189,7 +141,7 @@ tr:nth-child(even){background:#f9f9f9;}
 <tbody id="listaAgendamentos"></tbody>
 </table>
 
-<h2>Fotos do Slide</h2>
+<h2>Fotos</h2>
 <input type="file" id="fotoUpload">
 <button id="btnUploadFoto">Enviar Foto</button>
 <div id="listaFotos"></div>
@@ -211,39 +163,39 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 
-/* ADMIN */
+/* LOGIN */
 document.getElementById("btnAdmin").onclick = () => {
-  document.getElementById("containerLogin").style.display = "block";
+  document.getElementById("containerLogin").style.display="block";
 };
 
-document.getElementById("formLogin").addEventListener("submit", e => {
+document.getElementById("formLogin").addEventListener("submit", e=>{
   e.preventDefault();
   if(document.getElementById("usuario").value==="Michelly" && document.getElementById("senha").value==="88691553"){
     document.getElementById("painelADM").style.display="block";
     carregarAgendamentos();
-    carregarListaFotos();
   }
 });
 
 /* HORÁRIOS */
 const horarios = {5:["18:00"],6:["08:00","10:00","14:00","16:00","18:00"]};
-const inputData = document.getElementById("data");
-const selectHorario = document.getElementById("horario");
 
-inputData.addEventListener("change", async ()=>{
-  selectHorario.innerHTML = '<option value="">Selecione horário</option>';
-  const dia = new Date(inputData.value+"T00:00:00").getDay();
+document.getElementById("data").addEventListener("change", async ()=>{
+  const data = document.getElementById("data").value;
+  const select = document.getElementById("horario");
+  select.innerHTML='<option>Selecione horário</option>';
+
+  const dia = new Date(data+"T00:00:00").getDay();
   const lista = horarios[dia]||[];
 
-  const snap = await getDocs(query(collection(db,"agendamentos"),where("data","==",inputData.value)));
+  const snap = await getDocs(query(collection(db,"agendamentos"),where("data","==",data)));
   const ocupados = snap.docs.map(d=>d.data().horario);
 
   lista.forEach(h=>{
     if(!ocupados.includes(h)){
-      const o = document.createElement("option");
+      const o=document.createElement("option");
       o.value=h;
       o.textContent=h;
-      selectHorario.appendChild(o);
+      select.appendChild(o);
     }
   });
 });
@@ -252,15 +204,15 @@ inputData.addEventListener("change", async ()=>{
 document.getElementById("formAgendamento").addEventListener("submit", async e=>{
   e.preventDefault();
 
-  const nome = document.getElementById("nome").value;
-  const whatsapp = document.getElementById("whatsapp").value;
-  const data = inputData.value;
-  const horario = selectHorario.value;
+  const nome = nome.value;
+  const whatsapp = whatsapp.value;
+  const data = document.getElementById("data").value;
+  const horario = document.getElementById("horario").value;
   const servico = document.getElementById("servico").value;
 
   await addDoc(collection(db,"agendamentos"),{nome, whatsapp, data, horario, servico});
 
-  alert("Agendado com sucesso!");
+  alert("Agendado!");
 });
 
 /* LISTAR */
@@ -272,48 +224,48 @@ async function carregarAgendamentos(){
 
   snap.forEach(docItem=>{
     const a = docItem.data();
-    const tr = document.createElement("tr");
-    tr.innerHTML = `<td>${a.nome}</td>
-                    <td>${a.data}</td>
-                    <td>${a.horario}</td>
-                    <td>${a.servico}</td>
-                    <td><button onclick="excluir('${docItem.id}')">❌</button></td>`;
+    const tr=document.createElement("tr");
+    tr.innerHTML=`<td>${a.nome}</td><td>${a.data}</td><td>${a.horario}</td><td>${a.servico}</td>
+    <td><button onclick="excluir('${docItem.id}')">❌</button></td>`;
     lista.appendChild(tr);
   });
 }
 
-window.excluir = async id => {
+window.excluir = async id=>{
   await deleteDoc(doc(db,"agendamentos",id));
   carregarAgendamentos();
 };
 
 /* 🔥 RELATÓRIO */
 window.gerarRelatorio = async () => {
+  try{
+    const hoje = new Date();
+    const amanha = new Date();
+    amanha.setDate(hoje.getDate()+1);
 
-  const hoje = new Date();
-  const amanha = new Date();
-  amanha.setDate(hoje.getDate() + 1);
+    const data = amanha.toISOString().split("T")[0];
 
-  const dataFormatada = amanha.toISOString().split("T")[0];
+    const snap = await getDocs(query(collection(db,"agendamentos"), where("data","==",data)));
 
-  const snap = await getDocs(query(collection(db,"agendamentos"), where("data","==",dataFormatada)));
+    if(snap.empty){
+      alert("Nenhum agendamento amanhã");
+      return;
+    }
 
-  if(snap.empty){
-    alert("Nenhum agendamento para amanhã.");
-    return;
+    let msg = "📋 Agendamentos de amanhã:\n\n";
+
+    snap.forEach(d=>{
+      const a = d.data();
+      msg += `👤 ${a.nome}\n⏰ ${a.horario}\n💅 ${a.servico}\n\n`;
+    });
+
+    window.open(`https://wa.me/5511964657571?text=${encodeURIComponent(msg)}`);
+
+  }catch(e){
+    alert("Erro no relatório");
+    console.error(e);
   }
-
-  let mensagem = `📋 Agendamentos de amanhã:\n\n`;
-
-  snap.forEach(docItem => {
-    const a = docItem.data();
-    mensagem += `👤 ${a.nome}\n⏰ ${a.horario}\n💅 ${a.servico}\n\n`;
-  });
-
-  const numero = "5511964657571";
-
-  window.open(`https://wa.me/${numero}?text=${encodeURIComponent(mensagem)}`, "_blank");
 };
 </script>
 </body>
-</html>
+  </html>
