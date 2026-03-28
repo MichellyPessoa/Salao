@@ -55,7 +55,6 @@ th{
 tr:nth-child(even){background:#f9f9f9;}
 .today{background:#ffe6f0;}
 
-/* Botão admin bolinha */
 #btnAdmin {
   position: absolute;
   top: 15px;
@@ -69,15 +68,7 @@ tr:nth-child(even){background:#f9f9f9;}
   font-weight: bold;
   font-size: 18px;
   cursor: pointer;
-  box-shadow: 0 3px 8px rgba(0,0,0,0.3);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 0;
-  z-index: 10;
-  transition: 0.3s;
 }
-#btnAdmin:hover { opacity: 0.9; }
 
 /* Slider */
 #slider{
@@ -116,7 +107,7 @@ tr:nth-child(even){background:#f9f9f9;}
   cursor:pointer;
 }
 
-/* Campo WhatsApp com prefixo +55 */
+/* WhatsApp */
 .whatsappField{
   display: flex;
 }
@@ -126,16 +117,12 @@ tr:nth-child(even){background:#f9f9f9;}
   border-radius:8px 0 0 8px;
   border:1px solid #ccc;
   border-right:none;
-  font-size:16px;
-  line-height:18px;
 }
 .whatsappField input{
   flex:1;
   border-radius:0 8px 8px 0;
   border:1px solid #ccc;
   border-left:none;
-  padding:10px;
-  font-size:16px;
 }
 </style>
 </head>
@@ -147,20 +134,25 @@ tr:nth-child(even){background:#f9f9f9;}
   <h1>💅Agendamentos💅</h1>
   <form id="formAgendamento">
     <input type="text" id="nome" placeholder="Nome e sobrenome" required>
+
     <div class="whatsappField">
       <span>+55</span>
-      <input type="text" id="whatsapp" placeholder="(somente números, ex: 11964657571)" required>
+      <input type="text" id="whatsapp" placeholder="11999999999" required>
     </div>
+
     <input type="date" id="data" required>
+
     <select id="horario" required>
       <option value="">Selecione horário</option>
     </select>
+
     <select id="servico" required>
       <option value="">Selecione serviço</option>
       <option>Mão e Pé</option>
       <option>Pedicure</option>
       <option>Manicure</option>
     </select>
+
     <button type="submit">Agendar</button>
   </form>
 
@@ -169,20 +161,25 @@ tr:nth-child(even){background:#f9f9f9;}
   </div>
 </div>
 
-<!-- Login Admin -->
+<!-- Login -->
 <div class="container" id="containerLogin" style="display:none">
 <h2>Painel Admin</h2>
 <form id="formLogin">
-<input type="text" id="usuario" placeholder="Usuário">
-<input type="password" id="senha" placeholder="Senha">
+<input type="text" id="usuario">
+<input type="password" id="senha">
 <button type="submit">Login</button>
 </form>
 </div>
 
-<!-- Painel Admin -->
+<!-- Painel -->
 <div class="container" id="painelADM" style="display:none">
 <h2>Agendamentos</h2>
+
+<!-- BOTÃO NOVO -->
+<button onclick="gerarRelatorio()" style="background:#28a745;">📋 Gerar relatório de amanhã</button>
+
 <p>Total: <span id="totalAgendamentos">0</span></p>
+
 <table>
 <thead>
 <tr>
@@ -210,208 +207,113 @@ const firebaseConfig = {
   messagingSenderId: "9299274038",
   appId: "1:9299274038:web:1617789c2ca2a08dfc6b97"
 };
+
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 
-/* abrir login */
+/* ADMIN */
 document.getElementById("btnAdmin").onclick = () => {
   document.getElementById("containerLogin").style.display = "block";
-  window.scrollTo(0,document.body.scrollHeight);
 };
 
-/* login */
-document.getElementById("formLogin").addEventListener("submit", async e => {
+document.getElementById("formLogin").addEventListener("submit", e => {
   e.preventDefault();
-  const usuario = document.getElementById("usuario").value.trim();
-  const senha = document.getElementById("senha").value.trim();
-  if(usuario==="Michelly" && senha==="88691553"){
+  if(document.getElementById("usuario").value==="Michelly" && document.getElementById("senha").value==="88691553"){
     document.getElementById("painelADM").style.display="block";
-    document.getElementById("containerLogin").style.display="none";
     carregarAgendamentos();
     carregarListaFotos();
-  } else alert("Login incorreto");
+  }
 });
 
-/* horários */
+/* HORÁRIOS */
 const horarios = {5:["18:00"],6:["08:00","10:00","14:00","16:00","18:00"]};
 const inputData = document.getElementById("data");
 const selectHorario = document.getElementById("horario");
-inputData.addEventListener("change", atualizarHorarios);
 
-async function atualizarHorarios(){
+inputData.addEventListener("change", async ()=>{
   selectHorario.innerHTML = '<option value="">Selecione horário</option>';
   const dia = new Date(inputData.value+"T00:00:00").getDay();
   const lista = horarios[dia]||[];
-  const q = query(collection(db,"agendamentos"),where("data","==",inputData.value));
-  const snap = await getDocs(q);
+
+  const snap = await getDocs(query(collection(db,"agendamentos"),where("data","==",inputData.value)));
   const ocupados = snap.docs.map(d=>d.data().horario);
+
   lista.forEach(h=>{
     if(!ocupados.includes(h)){
       const o = document.createElement("option");
-      o.value=h; o.textContent=h;
+      o.value=h;
+      o.textContent=h;
       selectHorario.appendChild(o);
     }
   });
-}
+});
 
-/* AGENDAMENTO */
+/* AGENDAR */
 document.getElementById("formAgendamento").addEventListener("submit", async e=>{
   e.preventDefault();
-  const nome = document.getElementById("nome").value.trim();
-  const whatsappCliente = document.getElementById("whatsapp").value.trim();
-  const data = inputData.value.trim();
+
+  const nome = document.getElementById("nome").value;
+  const whatsapp = document.getElementById("whatsapp").value;
+  const data = inputData.value;
   const horario = selectHorario.value;
   const servico = document.getElementById("servico").value;
 
-  // Validação completa
-  if(!nome || !whatsappCliente || !data || !horario || !servico){
-    alert("Por favor, preencha todos os campos antes de agendar.");
-    return;
-  }
+  await addDoc(collection(db,"agendamentos"),{nome, whatsapp, data, horario, servico});
 
-  await addDoc(collection(db,"agendamentos"),{nome, whatsapp: whatsappCliente, data, horario, servico});
-
-  const msg = `💖 Novo Agendamento 💖
-
-👤 Nome: ${nome}
-📅 Data: ${data}
-⏰ Horário: ${horario}
-💅 Serviço: ${servico}
-📱 WhatsApp: +55${whatsappCliente}`;
-
-  const meuNumero = "5511964657571";
-  window.location.href=`https://wa.me/${meuNumero}?text=${encodeURIComponent(msg)}`;
+  alert("Agendado com sucesso!");
 });
 
-/* CARREGAR AGENDAMENTOS */
+/* LISTAR */
 async function carregarAgendamentos(){
-  const q = query(collection(db,"agendamentos"),orderBy("data"));
-  const snap = await getDocs(q);
+  const snap = await getDocs(query(collection(db,"agendamentos"),orderBy("data")));
   const lista = document.getElementById("listaAgendamentos");
-  lista.innerHTML = "";
+  lista.innerHTML="";
   document.getElementById("totalAgendamentos").innerText = snap.size;
 
   snap.forEach(docItem=>{
     const a = docItem.data();
-    const hoje = new Date();
-    const agendamentoData = new Date(a.data+"T00:00:00");
-    const umDia = new Date();
-    umDia.setDate(hoje.getDate() + 1);
-    const podeEnviar = agendamentoData >= umDia;
-
     const tr = document.createElement("tr");
     tr.innerHTML = `<td>${a.nome}</td>
                     <td>${a.data}</td>
                     <td>${a.horario}</td>
                     <td>${a.servico}</td>
-                    <td>
-                      <button onclick="excluir('${docItem.id}')">❌</button>
-                      <button ${!podeEnviar ? "disabled" : ""} onclick="enviarConfirmacao('${a.nome}','${a.whatsapp}','${a.data}','${a.horario}')">💌 Confirmar</button>
-                    </td>`;
+                    <td><button onclick="excluir('${docItem.id}')">❌</button></td>`;
     lista.appendChild(tr);
   });
 }
 
-/* EXCLUIR AGENDAMENTO */
 window.excluir = async id => {
   await deleteDoc(doc(db,"agendamentos",id));
   carregarAgendamentos();
 };
 
-/* ENVIAR CONFIRMAÇÃO PARA O CLIENTE */
-window.enviarConfirmacao = (nome, whatsapp, data, horario) => {
-  const msg = `Olá, ${nome}! 💖
+/* 🔥 RELATÓRIO */
+window.gerarRelatorio = async () => {
 
-Estou passando para confirmar seu horário:
-📅 Data: ${data}
-⏰ Horário: ${horario}
+  const hoje = new Date();
+  const amanha = new Date();
+  amanha.setDate(hoje.getDate() + 1);
 
-Peço, por favor, que atrasos não ultrapassem 10 minutos, para manter a qualidade e capricho que você merece.
+  const dataFormatada = amanha.toISOString().split("T")[0];
 
-Agradeço a compreensão.
-Te espero! ✨💕
+  const snap = await getDocs(query(collection(db,"agendamentos"), where("data","==",dataFormatada)));
 
-Com carinho,
-𝑴𝒊𝒄𝒉𝒆𝒍𝒍𝒚 𝑷𝒆𝒔𝒔𝒐𝒂 💅💎`;
-
-  window.open(`https://wa.me/55${whatsapp}?text=${encodeURIComponent(msg)}`, "_blank");
-};
-
-/* ----------- Cloudinary upload fotos ----------- */
-const btnUpload = document.getElementById("btnUploadFoto");
-const fotoUpload = document.getElementById("fotoUpload");
-
-btnUpload.onclick = async () => {
-  const file = fotoUpload.files[0];
-  if(!file){ alert("Selecione uma foto"); return; }
-
-  const formData = new FormData();
-  formData.append("file", file);
-  formData.append("upload_preset", "Slides");
-
-  try {
-    const resposta = await fetch("https://api.cloudinary.com/v1_1/dsococdfy/image/upload",{
-      method:"POST",
-      body:formData
-    });
-    const data = await resposta.json();
-    const url = data.secure_url;
-
-    await addDoc(collection(db,"fotos"), {url, criadoEm: new Date()});
-    fotoUpload.value="";
-    carregarListaFotos();
-    carregarFotos();
-    alert("Foto enviada com sucesso!");
-  } catch(err){
-    console.error(err);
-    alert("Erro ao enviar a foto.");
+  if(snap.empty){
+    alert("Nenhum agendamento para amanhã.");
+    return;
   }
-};
 
-/* listar fotos */
-async function carregarListaFotos(){
-  const snap = await getDocs(collection(db,"fotos"));
-  const div = document.getElementById("listaFotos");
-  div.innerHTML = "";
-  snap.forEach(docItem=>{
-    const data = docItem.data();
-    const img = document.createElement("img");
-    img.src = data.url;
-    const btn = document.createElement("button");
-    btn.innerText = "Excluir";
-    btn.onclick = async ()=>{
-      await deleteDoc(doc(db,"fotos",docItem.id));
-      carregarListaFotos();
-      carregarFotos();
-    };
-    div.appendChild(img);
-    div.appendChild(btn);
+  let mensagem = `📋 Agendamentos de amanhã:\n\n`;
+
+  snap.forEach(docItem => {
+    const a = docItem.data();
+    mensagem += `👤 ${a.nome}\n⏰ ${a.horario}\n💅 ${a.servico}\n\n`;
   });
-}
 
-/* slider com fade */
-let fotos = [];
-let index = 0;
-const slideImg = document.getElementById("slideImg");
+  const numero = "5511964657571";
 
-async function carregarFotos(){
-  fotos = [];
-  const snap = await getDocs(collection(db,"fotos"));
-  snap.forEach(d => fotos.push(d.data().url));
-  if(fotos.length>0) slideImg.src = fotos[0];
-
-  setInterval(() => {
-    if(fotos.length === 0) return;
-    slideImg.style.opacity = 0;
-    setTimeout(() => {
-      index++;
-      if(index >= fotos.length) index = 0;
-      slideImg.src = fotos[index];
-      slideImg.style.opacity = 1;
-    }, 500);
-  }, 3000);
-}
-carregarFotos();
+  window.open(`https://wa.me/${numero}?text=${encodeURIComponent(mensagem)}`, "_blank");
+};
 </script>
 </body>
-  </html>
+</html>
